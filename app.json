@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "requireFullScreen": true,
       "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Connect to Bluetooth MIDI devices",
         "UIRequiresFullScreen": true,
         "UISupportedInterfaceOrientations~ipad": [
           "UIInterfaceOrientationLandscapeLeft",
@@ -31,6 +32,9 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "android": {
+      "package": "com.synthhelper.app"
+    }
   }
 }

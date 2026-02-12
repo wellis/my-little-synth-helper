@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useMidiStore } from '../src/store/useMidiStore';
 import { colors } from '../src/config/theme';
 
+const CHANNELS = Array.from({ length: 16 }, (_, i) => i + 1);
+
 export default function SettingsScreen() {
   const devices = useMidiStore((s) => s.devices);
   const connectedDeviceId = useMidiStore((s) => s.connectedDeviceId);
@@ -9,6 +11,7 @@ export default function SettingsScreen() {
   const disconnectDevice = useMidiStore((s) => s.disconnectDevice);
   const refreshDevices = useMidiStore((s) => s.refreshDevices);
   const controllers = useMidiStore((s) => s.controllers);
+  const setChannel = useMidiStore((s) => s.setChannel);
 
   return (
     <View style={styles.container}>
@@ -62,17 +65,42 @@ export default function SettingsScreen() {
             </Text>
           )}
         </View>
+      </View>
 
-        {Object.keys(controllers).length > 0 && (
-          <View style={styles.controllerSummary}>
-            <Text style={styles.subTitle}>Controllers</Text>
-            {Object.entries(controllers).map(([id, ctrl]) => (
-              <View key={id} style={styles.controllerRow}>
-                <Text style={styles.controllerName}>{id}</Text>
-                <Text style={styles.controllerChannel}>Ch {ctrl.channel}</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>MIDI Channels</Text>
+
+        {Object.keys(controllers).length > 0 ? (
+          Object.entries(controllers).map(([id, ctrl]) => (
+            <View key={id} style={styles.controllerBlock}>
+              <Text style={styles.controllerName}>{id}</Text>
+              <View style={styles.channelGrid}>
+                {CHANNELS.map((ch) => (
+                  <Pressable
+                    key={ch}
+                    style={[
+                      styles.channelButton,
+                      ch === ctrl.channel && styles.channelButtonActive,
+                    ]}
+                    onPress={() => setChannel(id, ch)}
+                  >
+                    <Text
+                      style={[
+                        styles.channelText,
+                        ch === ctrl.channel && styles.channelTextActive,
+                      ]}
+                    >
+                      {ch}
+                    </Text>
+                  </Pressable>
+                ))}
               </View>
-            ))}
-          </View>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.emptyText}>
+            No controllers registered yet.
+          </Text>
         )}
       </View>
 
@@ -114,14 +142,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textTransform: 'uppercase',
     letterSpacing: 1,
-  },
-  subTitle: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   info: {
     color: colors.text,
@@ -191,25 +211,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: 20,
   },
-  controllerSummary: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  controllerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
+  controllerBlock: {
+    marginBottom: 16,
   },
   controllerName: {
     color: colors.text,
     fontSize: 13,
-  },
-  controllerChannel: {
-    color: colors.accent,
-    fontSize: 13,
     fontWeight: '600',
+    marginBottom: 10,
+  },
+  channelGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  channelButton: {
+    width: 44,
+    height: 36,
+    borderRadius: 6,
+    backgroundColor: colors.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  channelButtonActive: {
+    backgroundColor: colors.accentDim,
+    borderColor: colors.accent,
+  },
+  channelText: {
+    color: colors.textDim,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  channelTextActive: {
+    color: colors.accent,
   },
 });

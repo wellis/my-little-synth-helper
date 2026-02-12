@@ -61,8 +61,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   listContainer: {
-    width: 72,
-    height: 120,
+    width: 80,
+    height: 160,
     backgroundColor: colors.faderTrack,
     borderRadius: 6,
     overflow: 'hidden',
@@ -88,5 +88,7 @@ const styles = StyleSheet.create({
     color: colors.textDim,
     fontSize: 9,
     textAlign: 'center',
+    lineHeight: 12,
+    height: 24,
   },
 });

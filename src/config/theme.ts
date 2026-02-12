@@ -18,8 +18,8 @@ export const colors = {
 } as const;
 
 export const layout = {
-  faderWidth: 40,
-  faderHeight: 120,
+  faderWidth: 80,
+  faderHeight: 160,
   sectionPadding: 10,
   gap: 6,
   borderRadius: 8,

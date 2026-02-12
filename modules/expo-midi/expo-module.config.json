@@ -1,0 +1,6 @@
+{
+  "platforms": ["ios"],
+  "ios": {
+    "modulePath": "ios"
+  }
+}

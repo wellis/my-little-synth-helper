@@ -1,10 +1,12 @@
 /**
  * MIDI Manager - handles device connection and CC send/receive.
  *
- * Uses a pluggable transport so we can swap in the real native MIDI library
- * (@motiz88/react-native-midi or similar) once the dev client is built.
- * In dev/simulator mode, falls back to a no-op stub that logs to console.
+ * Uses the local expo-midi native module for CoreMIDI access.
+ * Falls back to a no-op stub on simulator or when native module is unavailable.
  */
+
+import ExpoMidi from 'expo-midi';
+import type { MidiCCEvent, DevicesChangedEvent } from 'expo-midi';
 
 export interface MidiDevice {
   id: string;
@@ -18,19 +20,27 @@ class MidiManager {
   private outputDeviceId: string | null = null;
   private listeners: Set<CCListener> = new Set();
   private nativeAvailable = false;
+  private ccSubscription: { remove(): void } | null = null;
+  private devicesSubscription: { remove(): void } | null = null;
+  private devicesChangedCallbacks: Set<() => void> = new Set();
 
   async initialize(): Promise<void> {
     try {
-      // Try to import native MIDI module
-      const mod = await import('@motiz88/react-native-midi').catch(() => null);
-      if (mod) {
-        this.nativeAvailable = true;
-        console.log('[MIDI] Native MIDI module available');
-      } else {
-        console.log('[MIDI] Native MIDI not available — running in stub mode');
-      }
+      await ExpoMidi.initialize();
+      this.nativeAvailable = true;
+      console.log('[MIDI] Native CoreMIDI module initialized');
+
+      this.ccSubscription = ExpoMidi.addListener('onMidiCC', (event: MidiCCEvent) => {
+        this.handleIncomingCC(event.channel, event.cc, event.value);
+      });
+
+      this.devicesSubscription = ExpoMidi.addListener('onDevicesChanged', (_event: DevicesChangedEvent) => {
+        for (const cb of this.devicesChangedCallbacks) {
+          cb();
+        }
+      });
     } catch {
-      console.log('[MIDI] Running in stub mode');
+      console.log('[MIDI] Native module not available — running in stub mode');
     }
   }
 
@@ -38,28 +48,42 @@ class MidiManager {
     if (!this.nativeAvailable) {
       return [{ id: 'stub', name: 'Simulator (stub)', type: 'usb' }];
     }
-    // TODO: enumerate real CoreMIDI devices
-    return [];
+    const nativeDevices = ExpoMidi.listDevices();
+    return nativeDevices.map((d) => ({
+      id: String(d.id),
+      name: d.name,
+      type: 'usb' as const,
+    }));
   }
 
   async connect(deviceId: string): Promise<boolean> {
+    if (this.nativeAvailable && deviceId !== 'stub') {
+      const success = await ExpoMidi.connect(Number(deviceId));
+      if (success) {
+        this.outputDeviceId = deviceId;
+        console.log(`[MIDI] Connected to ${deviceId}`);
+        return true;
+      }
+      return false;
+    }
     this.outputDeviceId = deviceId;
     console.log(`[MIDI] Connected to ${deviceId}`);
     return true;
   }
 
   disconnect(): void {
+    if (this.nativeAvailable) {
+      ExpoMidi.disconnect();
+    }
     this.outputDeviceId = null;
     console.log('[MIDI] Disconnected');
   }
 
   sendCC(channel: number, cc: number, value: number): void {
     const clamped = Math.max(0, Math.min(127, Math.round(value)));
-    const statusByte = 0xb0 | ((channel - 1) & 0x0f);
 
-    if (this.nativeAvailable && this.outputDeviceId) {
-      // TODO: send via native module
-      // NativeMidi.send(this.outputDeviceId, [statusByte, cc, clamped]);
+    if (this.nativeAvailable && this.outputDeviceId && this.outputDeviceId !== 'stub') {
+      ExpoMidi.sendCC(channel, cc, clamped);
     }
 
     console.log(
@@ -71,6 +95,11 @@ class MidiManager {
   onCC(listener: CCListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  onDevicesChanged(callback: () => void): () => void {
+    this.devicesChangedCallbacks.add(callback);
+    return () => this.devicesChangedCallbacks.delete(callback);
   }
 
   /** Called by the native receive callback */

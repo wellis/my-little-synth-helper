@@ -86,5 +86,7 @@ const styles = StyleSheet.create({
     color: colors.textDim,
     fontSize: 9,
     textAlign: 'center',
+    lineHeight: 12,
+    height: 24,
   },
 });

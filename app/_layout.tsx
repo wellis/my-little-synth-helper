@@ -35,7 +35,7 @@ export default function RootLayout() {
           name="index"
           options={{
             title: 'P-6 Granular',
-            headerTitle: 'P-6 Granular Engine',
+            headerShown: false,
             tabBarLabel: 'P-6 Granular',
           }}
         />
